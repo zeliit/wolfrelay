@@ -10,7 +10,7 @@
 ## 사용자가 Mihon에 넣는 값
 
 ```text
-도메인: https://wftoon218.com
+도메인: https://wftoon111.com
 Relay URL: https://wf.example.com
 ```
 
