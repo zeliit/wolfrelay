@@ -106,6 +106,6 @@ Reverse Proxy가 Docker 컨테이너면:
 3. Mihon 설정이 아래처럼 들어갔는지
 
 ```text
-도메인: https://wftoon218.com
+도메인: https://wftoon111.com
 Relay URL: https://wf.example.com
 ```
