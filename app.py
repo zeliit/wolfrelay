@@ -27,7 +27,7 @@ IMAGE_ACCEPT = os.getenv(
     "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
 )
 REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "30"))
-FLARESOLVERR_URL = os.getenv("FLARESOLVERR_URL", "http://host.docker.internal:8191/v1").strip()
+FLARESOLVERR_URL = os.getenv("FLARESOLVERR_URL", "http://flaresolverr:8191/v1").strip()
 
 ALLOWED_HOST_REGEX = re.compile(r"^wftoon\d+\.com$", re.IGNORECASE)
 
@@ -124,13 +124,16 @@ def flaresolverr_fetch(target_url: str) -> tuple[bytes, str, str]:
         "maxTimeout": REQUEST_TIMEOUT * 1000,
     }
 
-    response = requests.post(
-        FLARESOLVERR_URL,
-        headers={"Content-Type": "application/json"},
-        data=json.dumps(payload),
-        timeout=REQUEST_TIMEOUT + 10,
-    )
-    response.raise_for_status()
+    try:
+        response = requests.post(
+            FLARESOLVERR_URL,
+            headers={"Content-Type": "application/json"},
+            data=json.dumps(payload),
+            timeout=REQUEST_TIMEOUT + 10,
+        )
+        response.raise_for_status()
+    except requests.RequestException as e:
+        raise RuntimeError(f"flaresolverr is unavailable: {FLARESOLVERR_URL}") from e
 
     data = response.json()
     if data.get("status") != "ok":
