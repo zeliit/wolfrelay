@@ -3,18 +3,10 @@ services:
     build: .
     container_name: wolfrelay
     restart: unless-stopped
-    depends_on:
-      - flaresolverr
     ports:
       - "8911:8911"
     environment:
       PORT: "8911"
-      FLARESOLVERR_URL: "http://flaresolverr:8191/v1"
-
-  flaresolverr:
-    image: ghcr.io/flaresolverr/flaresolverr:latest
-    restart: unless-stopped
-    environment:
-      LOG_LEVEL: "info"
-      LOG_HTML: "false"
-      CAPTCHA_SOLVER: "none"
+      FLARESOLVERR_URL: "http://host.docker.internal:8191/v1"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

@@ -1,14 +1,13 @@
 # wolfrelay
 
-`wftoon###.com` 계열 사이트를 Mihon에서 열기 위한 간단한 릴레이 서버입니다.
+`wftoon###.com` 계열 사이트를 Mihon에서 읽기 위한 간단한 릴레이 서버다.
 
-## 핵심
+## 용도
 
-- Mihon이 직접 접속할 때 `Connection reset`이 나는 경우 사용
-- `wolfrelay`가 HTML/이미지를 대신 받아 Mihon에 전달
-- `docker compose up -d --build` 한 번이면 `wolfrelay`와 `FlareSolverr`가 같이 올라옵니다
+- Mihon에서 직접 접속하면 `Connection reset`이 나는 경우 사용
+- 서버가 대신 HTML/이미지를 받아서 Mihon에 전달
 
-## Mihon 설정
+## 사용자가 Mihon에 넣는 값
 
 ```text
 도메인: https://wftoon111.com
@@ -17,8 +16,18 @@ Relay URL: https://wf.example.com
 
 주의:
 
-- Mihon에는 공개 주소만 넣습니다
-- `172.17.0.1:8911`, `host.docker.internal:8191` 같은 내부 주소는 넣지 않습니다
+- 사용자는 `172.17.0.1:8911` 같은 내부 주소를 넣지 않는다.
+- 최신 확장에서는 `프록시 URL`을 쓰지 않는다.
+
+## 서버 구조
+
+- 공개 주소: `https://wf.example.com`
+- 내부 wolfrelay: `http://172.17.0.1:8911` 또는 같은 Docker network의 서비스명
+
+즉:
+
+- Mihon은 `https://wf.example.com`에 붙음
+- Reverse Proxy는 내부적으로 `http://172.17.0.1:8911`에 붙음
 
 ## 실행
 
@@ -29,10 +38,16 @@ docker compose up -d --build
 
 ## 확인
 
-로컬 헬스체크:
+헬스체크:
 
 ```powershell
 curl.exe -sS http://127.0.0.1:8911/health
+```
+
+공개 주소 확인:
+
+```powershell
+curl.exe -sS https://wf.example.com/health
 ```
 
 정상 응답:
@@ -41,26 +56,36 @@ curl.exe -sS http://127.0.0.1:8911/health
 {"status":"ok"}
 ```
 
-컨테이너 확인:
+## Reverse Proxy 설정
 
-```powershell
-docker compose ps
-```
+### 1. 공개 도메인 준비
 
-여기서 `wolfrelay`, `flaresolverr` 두 컨테이너가 모두 떠 있어야 합니다.
+- 예: `wf.example.com`
+- 이 도메인이 wolfrelay 서버를 가리키도록 DNS 설정
 
-## Reverse Proxy
+### 2. Proxy Host 생성
 
-예시 공개 주소:
+- Domain Names: `wf.example.com`
+- Scheme: `http`
+- Forward Port: `8911`
 
-- `https://wf.example.com`
+Forward Hostname/IP는 환경에 따라 다르다.
 
-Reverse Proxy는 이 공개 주소를 내부 `wolfrelay:8911` 또는 호스트 `8911`로 넘기면 됩니다.
+### 3. 업스트림 주소
+
+Reverse Proxy가 서버에서 직접 8911에 붙을 수 있으면:
+
+- `127.0.0.1`
+- 또는 서버 공인 IP
+
+Reverse Proxy가 Docker 컨테이너면:
+
+- `172.17.0.1`
 
 중요:
 
-- 사용자 앱에는 공개 주소 `https://wf.example.com` 을 넣습니다
-- `host.docker.internal:8191` 는 사용자용 주소가 아니라, 예전 서버 내부 우회용 주소였습니다
+- `172.17.0.1`는 사용자용 주소가 아니다.
+- NPM 컨테이너가 자기 호스트로 붙을 때 쓰는 내부 주소다.
 
 ## 엔드포인트
 
@@ -68,30 +93,19 @@ Reverse Proxy는 이 공개 주소를 내부 `wolfrelay:8911` 또는 호스트 `
 - `/html?url=...&referer=...`
 - `/binary?url=...&referer=...`
 
-제한:
+정책:
 
-- `/html` 은 `wftoon###.com`만 허용
-- `/binary` 는 공인 이미지 호스트만 허용
+- `/html`은 `wftoon###.com`만 허용
+- `/binary`는 공인 외부 이미지 호스트 허용
+- `/binary`의 `referer`는 `wftoon###.com` 계열이어야 함
 
-## 지금 보고된 에러의 뜻
+## 문제 생기면 체크할 것
 
-아래 에러:
+1. `https://wf.example.com/health`가 열리는지
+2. Reverse Proxy 업스트림이 실제로 `8911`에 붙는지
+3. Mihon 설정이 아래처럼 들어갔는지
 
 ```text
-HTTPConnectionPool(host='host.docker.internal', port=8191) ...
-Failed to establish a new connection: [Errno 111] Connection refused
-```
-
-의미:
-
-- `wolfrelay`가 HTML 우회 처리를 위해 FlareSolverr에 붙으려 했음
-- 그런데 배포한 사람 서버에는 `8191`에서 받는 FlareSolverr가 없었음
-
-즉, 배포 환경이 불완전했던 것입니다.
-
-이제는 기본 `docker-compose.yml` 이 FlareSolverr를 같이 띄우므로, 배포자는 아래만 다시 하면 됩니다:
-
-```powershell
-docker compose down
-docker compose up -d --build
+도메인: https://wftoon111.com
+Relay URL: https://wf.example.com
 ```
